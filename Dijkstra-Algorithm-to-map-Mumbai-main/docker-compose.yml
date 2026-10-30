@@ -1,0 +1,39 @@
+# Brings up the app together with a local MongoDB instance.
+#
+# Usage:
+#   docker compose up --build          # start app + MongoDB
+#   docker compose run --rm web python seed_db.py   # one-time seed
+#   docker compose down                # stop (add -v to also wipe the DB volume)
+#
+# The app works even without this file (it falls back to built-in map
+# data if MONGO_URI isn't set) — this is only needed to exercise the
+# MongoDB-backed features (add_location, popular routes, search history).
+
+services:
+  web:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - MONGO_URI=mongodb://mongo:27017
+      - MONGO_DB_NAME=mumbai_navigator
+    depends_on:
+      mongo:
+        condition: service_healthy
+    volumes:
+      - .:/app  # live-reload source changes during local development
+
+  mongo:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  mongo_data:
